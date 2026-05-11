@@ -46,8 +46,8 @@ src/
 ## 🚀 Getting Started
 
 ```bash
-bun install
-bun dev
+bun install or pnpm i
+bun dev or pnpm dev
 ```
 
 Then open the preview URL shown in the terminal.

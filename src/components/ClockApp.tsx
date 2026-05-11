@@ -12,6 +12,21 @@ import {
   Maximize,
 } from "lucide-react";
 
+// Returns true when viewport width is <= 640px (mobile)
+function useIsMobile() {
+  // if you are in laptop ,it is false ,in mobile ye true hogi
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
+  useEffect(() => {
+    // yeh function media query ko match karne k liye hai
+    const mq = window.matchMedia("(max-width: 640px)");
+// screen ki width ko rakhta hai ,small screen
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 // A small productivity clock that can run as a countdown Timer
 // or a count-up Stopwatch. Kept in one file on purpose so it's
 // easy to read top-to-bottom.
@@ -36,6 +51,9 @@ function formatTimer(ms: number) {
 }
 
 export default function ClockApp() {
+  const isMobile = useIsMobile();
+
+
   // UI state
   const [mode, setMode] = useState<Mode>("timer");
   const [isMuted, setIsMuted] = useState(false);
@@ -55,10 +73,15 @@ export default function ClockApp() {
   const frameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number>(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
+// wrapperRef full screen k liye same component mai use kar rahe hai yaha.
+// forwardRef tab use hota hai jab parent component apna data child component tak pahuchana chahte hai
 
   // --- ticking loop -----------------------------------------------------
   // We use requestAnimationFrame instead of setInterval so the stopwatch
   // stays smooth and the timer doesn't drift.
+  // useEffect isRunning: false requestAnimationFrame start
+  // isRunning true -->
+  // isRunning false --> requestAnimationFrame clear(cancelAnimationFrame))
   useEffect(() => {
     if (!isRunning) return;
 
@@ -124,11 +147,15 @@ export default function ClockApp() {
     }
   }
 
+
+
   function toggleFullscreen() {
     const el = wrapperRef.current;
+    // screen status , 
     if (!el) return;
     if (document.fullscreenElement) {
       document.exitFullscreen?.();
+      // Avoid Crashes? Browser Compatibility
     } else {
       el.requestFullscreen?.();
     }
@@ -141,6 +168,7 @@ export default function ClockApp() {
   // How far around the ring we should be (0..1).
   // Timer: how much has elapsed of the total.
   // Stopwatch: position of the dot on a 60-second sweep.
+  // we are animating timer progress bar here.
   const progress = isTimer
     ? timerTotalMs > 0
       ? 1 - timerRemainingMs / timerTotalMs
@@ -151,8 +179,8 @@ export default function ClockApp() {
     ? formatTimer(timerRemainingMs)
     : formatStopwatch(stopwatchMs);
 
-  // Ring geometry
-  const SIZE = 280;
+  // Ring geometry — smaller on mobile so it fits without scrolling
+  const SIZE = isMobile ? 220 : 280;
   const STROKE = 2;
   const radius = (SIZE - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -163,11 +191,11 @@ export default function ClockApp() {
   const dotY = SIZE / 2 + radius * Math.sin(dotAngle);
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4 sm:p-4">
       <div
         ref={wrapperRef}
         className="w-full max-w-3xl rounded-3xl border border-white/5 bg-[oklch(0.22_0.015_260)] shadow-2xl overflow-hidden"
-        style={{ aspectRatio: "16/10" }}
+        style={isMobile ? undefined : { aspectRatio: "16/10" }}
       >
         {/* Top bar: mode tabs on the left, mute + fullscreen on the right */}
         <div className="flex items-center justify-between px-5 py-4">
@@ -211,7 +239,7 @@ export default function ClockApp() {
         </div>
 
         {/* Clock face */}
-        <div className="flex items-center justify-center py-2">
+        <div className="flex items-center justify-center py-2 sm:py-2 py-1">
           <div className="relative" style={{ width: SIZE, height: SIZE }}>
             {/* The two rings: a faint track and the colored progress arc. */}
             <svg
